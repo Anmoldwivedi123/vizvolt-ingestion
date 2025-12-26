@@ -4,6 +4,18 @@ import psycopg2
 import time
 import os
 from datetime import datetime
+import threading
+from fastapi import FastAPI
+import uvicorn
+
+app = FastAPI()
+
+@app.get("/")
+def health():
+    return {"status": "ok", "service": "vizvolt-ingestion"}
+    
+def start_web():
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
 # =========================================================
 # DATABASE CONFIG (RENDER)
@@ -136,6 +148,10 @@ def upsert_device(conn, device):
 
 def main():
     print("Vizvolt RAW ingestion started...")
+
+    # 🔹 start web server in background
+    threading.Thread(target=start_web, daemon=True).start()
+
     while True:
         try:
             conn = get_db_connection()
@@ -145,11 +161,11 @@ def main():
                 upsert_device(conn, device)
 
             conn.close()
-
         except Exception as e:
             print("MAIN LOOP ERROR:", e)
 
         time.sleep(10)
+
 
 if __name__ == "__main__":
     main()
